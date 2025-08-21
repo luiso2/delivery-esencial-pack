@@ -36,7 +36,11 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git checkout -B out-static-files
-        git add out/
-        git commit -m "Auto update static files: $(date)" || exit 0
+        git fetch origin out-static-files || true
+        git checkout --orphan temp-out-static-files
+        git rm -rf --cached .
+        git add -f out/
+        git commit -m "Auto update static files: $(date)"
+        git branch -D out-static-files || true
+        git branch -m temp-out-static-files out-static-files
         git push origin out-static-files --force
