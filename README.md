@@ -2,6 +2,8 @@
 
 Sistema de gestión de entregas construido con Next.js 14, TypeScript y Tailwind CSS. Aplicación web responsive y mobile-first con API REST integrada.
 
+🚀 **Sistema de deploy automático configurado** - Los cambios se despliegan automáticamente a la rama `out-static-files`.
+
 ## 🚀 Características
 
 - ✅ **Aplicación Full-Stack** con Next.js 14 App Router
