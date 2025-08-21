@@ -15,7 +15,10 @@ import {
   CurrencyDollarIcon,
   MapIcon
 } from '@heroicons/react/24/outline';
-import axios from 'axios';
+// import axios from 'axios'; // Removed - using mock data
+import { mockOrders } from '@/data/mockOrders';
+import { mockCaptures } from '@/data/mockCaptures';
+import { mockRoutes } from '@/data/mockRoutes';
 
 interface Metrics {
   orders: {
@@ -58,10 +61,51 @@ export default function HomePage() {
 
   const fetchMetrics = async () => {
     try {
-      const response = await axios.get('/api/metrics');
-      if (response.data.success) {
-        setMetrics(response.data.data);
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Calculate metrics from mock data
+      const orderMetrics = {
+        total: mockOrders.length,
+        pending: mockOrders.filter(o => o.status === 'pending').length,
+        inTransit: mockOrders.filter(o => o.status === 'in_transit').length,
+        delivered: mockOrders.filter(o => o.status === 'delivered').length,
+        failed: mockOrders.filter(o => o.status === 'failed').length,
+        incomplete: mockOrders.filter(o => o.status === 'incomplete').length,
+        delayed: mockOrders.filter(o => o.status === 'pending' && new Date(o.estimatedDelivery) < new Date()).length,
+        todayDeliveries: mockOrders.filter(o => 
+          o.status === 'delivered' && 
+          new Date(o.estimatedDelivery).toDateString() === new Date().toDateString()
+        ).length
+      };
+      
+      const captureMetrics = {
+        pending: mockCaptures.filter(c => c.status === 'pending').length,
+        failed: mockCaptures.filter(c => c.status === 'rejected').length,
+        success: mockCaptures.filter(c => c.status === 'verified').length,
+        partial: mockCaptures.filter(c => c.status === 'incomplete').length
+      };
+      
+      const revenueMetrics = {
+        total: mockOrders.reduce((sum, order) => sum + order.driverPayment, 0),
+        pending: mockOrders.filter(o => o.status === 'pending').reduce((sum, order) => sum + order.driverPayment, 0),
+        average: mockOrders.length > 0 ? mockOrders.reduce((sum, order) => sum + order.driverPayment, 0) / mockOrders.length : 0
+      };
+      
+      const routeMetrics = {
+        total: mockRoutes.length,
+        active: mockRoutes.filter(r => r.status === 'active').length,
+        draft: mockRoutes.filter(r => r.status === 'draft').length,
+        completed: mockRoutes.filter(r => r.status === 'completed').length,
+        totalOrders: mockRoutes.reduce((sum, route) => sum + route.orders.length, 0)
+      };
+      
+      setMetrics({
+        orders: orderMetrics,
+        captures: captureMetrics,
+        revenue: revenueMetrics,
+        routes: routeMetrics
+      });
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {

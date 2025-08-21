@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Route, RouteOrder, RouteColors } from '@/types/route';
 import { Order } from '@/types/order';
-import axios from 'axios';
+import { mockOrders } from '@/data/mockOrders';
 import toast from 'react-hot-toast';
 
 interface RouteBuilderProps {
@@ -35,14 +35,14 @@ export default function RouteBuilder({ route, onSave, onCancel }: RouteBuilderPr
 
   const fetchAvailableOrders = async () => {
     try {
-      const response = await axios.get('/api/orders?status=pending');
-      if (response.data.success) {
-        // Filter out orders already in routes
-        const orders = response.data.data.orders.filter((order: Order) => {
-          return !selectedOrders.some(so => so.orderId === order.id);
-        });
-        setAvailableOrders(orders);
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Filter pending orders and exclude already selected ones
+      const orders = mockOrders.filter((order: Order) => {
+        return order.status === 'pending' && !selectedOrders.some(so => so.orderId === order.id);
+      });
+      setAvailableOrders(orders);
     } catch (error) {
       console.error('Error fetching orders:', error);
     }

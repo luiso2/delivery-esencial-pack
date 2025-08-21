@@ -18,7 +18,9 @@ import {
   PlayIcon,
   PauseIcon
 } from '@heroicons/react/24/outline';
-import axios from 'axios';
+// import axios from 'axios'; // Removed - using mock data
+import { mockRoutes } from '@/data/mockRoutes';
+import { mockOrders } from '@/data/mockOrders';
 import { Route } from '@/types/route';
 import { Order } from '@/types/order';
 import toast from 'react-hot-toast';
@@ -40,20 +42,22 @@ export default function RouteDetailPage() {
 
   const fetchRoute = async (id: string) => {
     try {
-      const [routeResponse, ordersResponse] = await Promise.all([
-        axios.get(`/api/routes/${id}`),
-        axios.get('/api/orders')
-      ]);
-
-      if (routeResponse.data.success) {
-        setRoute(routeResponse.data.data);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Find route in mock data
+      const foundRoute = mockRoutes.find(route => route.id === id);
+      if (foundRoute) {
+        setRoute(foundRoute);
         
         // Filter orders that belong to this route
-        const routeOrderIds = routeResponse.data.data.orders.map((o: any) => o.orderId);
-        const filteredOrders = ordersResponse.data.data.orders.filter((order: Order) =>
+        const routeOrderIds = foundRoute.orders.map((o: any) => o.orderId);
+        const filteredOrders = mockOrders.filter((order: Order) =>
           routeOrderIds.includes(order.id)
         );
         setOrders(filteredOrders);
+      } else {
+        toast.error('Ruta no encontrada');
       }
     } catch (error) {
       console.error('Error fetching route:', error);
@@ -67,15 +71,17 @@ export default function RouteDetailPage() {
     if (!route) return;
 
     try {
-      const response = await axios.put(`/api/routes/${route.id}`, {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Update route status in mock data
+      const updatedRoute = {
         ...route,
         status: newStatus
-      });
-
-      if (response.data.success) {
-        setRoute(response.data.data);
-        toast.success(`Ruta ${newStatus === 'active' ? 'activada' : newStatus === 'completed' ? 'completada' : 'pausada'}`);
-      }
+      };
+      
+      setRoute(updatedRoute);
+      toast.success(`Ruta ${newStatus === 'active' ? 'activada' : newStatus === 'completed' ? 'completada' : 'pausada'}`);
     } catch (error) {
       console.error('Error updating route:', error);
       toast.error('Error al actualizar la ruta');
@@ -86,11 +92,13 @@ export default function RouteDetailPage() {
     if (!route || !confirm('¿Estás seguro de eliminar esta ruta?')) return;
 
     try {
-      const response = await axios.delete(`/api/routes/${route.id}`);
-      if (response.data.success) {
-        toast.success('Ruta eliminada');
-        router.push('/rutas');
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // In a real app, this would remove from the database
+      // For mock data, we just simulate success
+      toast.success('Ruta eliminada');
+      router.push('/rutas');
     } catch (error) {
       console.error('Error deleting route:', error);
       toast.error('Error al eliminar la ruta');
@@ -101,17 +109,18 @@ export default function RouteDetailPage() {
     if (!route) return;
 
     try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
       const updatedOrders = route.orders.filter(o => o.orderId !== orderId);
-      const response = await axios.put(`/api/routes/${route.id}`, {
+      const updatedRoute = {
         ...route,
         orders: updatedOrders
-      });
-
-      if (response.data.success) {
-        setRoute(response.data.data);
-        setOrders(orders.filter(o => o.id !== orderId));
-        toast.success('Pedido eliminado de la ruta');
-      }
+      };
+      
+      setRoute(updatedRoute);
+      setOrders(orders.filter(o => o.id !== orderId));
+      toast.success('Pedido eliminado de la ruta');
     } catch (error) {
       console.error('Error removing order:', error);
       toast.error('Error al eliminar el pedido');

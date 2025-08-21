@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { Order, OrderStatus, OrderType } from '@/types/order';
 import { OrderFilters } from '@/types/api';
-import axios from 'axios';
+// import axios from 'axios';
+import { mockOrders } from '@/data/mockOrders';
 
 interface OrderState {
   orders: Order[];
@@ -9,6 +10,9 @@ interface OrderState {
   error: string | null;
   filters: OrderFilters;
   selectedOrder: Order | null;
+  totalOrders: number;
+  totalPages: number;
+  currentPage: number;
   
   // Actions
   fetchOrders: (filters?: OrderFilters) => Promise<void>;
@@ -26,35 +30,63 @@ const useOrderStore = create<OrderState>((set, get) => ({
   error: null,
   filters: {},
   selectedOrder: null,
+  totalOrders: 0,
+  totalPages: 0,
+  currentPage: 1,
 
   fetchOrders: async (filters?: OrderFilters) => {
     set({ loading: true, error: null });
     try {
-      const params = new URLSearchParams();
       const currentFilters = filters || get().filters;
       
-      if (currentFilters.status?.length) {
-        params.append('status', currentFilters.status.join(','));
-      }
-      if (currentFilters.type) {
-        params.append('type', currentFilters.type);
-      }
-      if (currentFilters.search) {
-        params.append('search', currentFilters.search);
-      }
-      if (currentFilters.delayed) {
-        params.append('delayed', 'true');
-      }
-      params.append('page', String(currentFilters.page || 1));
-      params.append('limit', String(currentFilters.limit || 100));
-
-      const response = await axios.get(`/api/orders?${params.toString()}`);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (response.data.success) {
-        set({ orders: response.data.data.items, loading: false });
-      } else {
-        throw new Error(response.data.error);
+      let filteredOrders = [...mockOrders];
+      
+      // Apply filters
+      if (currentFilters.status?.length) {
+        filteredOrders = filteredOrders.filter(order => 
+          currentFilters.status!.includes(order.status)
+        );
       }
+      
+      if (currentFilters.type) {
+        filteredOrders = filteredOrders.filter(order => order.type === currentFilters.type);
+      }
+      
+      if (currentFilters.search) {
+        const searchLower = currentFilters.search.toLowerCase();
+        filteredOrders = filteredOrders.filter(order =>
+          order.id.toLowerCase().includes(searchLower) ||
+          order.clientName.toLowerCase().includes(searchLower) ||
+          order.address.toLowerCase().includes(searchLower) ||
+          order.municipality.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      if (currentFilters.delayed) {
+        const now = new Date();
+        filteredOrders = filteredOrders.filter(order => {
+          const estimatedDelivery = new Date(order.estimatedDelivery);
+          return now > estimatedDelivery && !['delivered', 'failed'].includes(order.status);
+        });
+      }
+      
+      // Pagination
+      const page = currentFilters.page || 1;
+      const limit = currentFilters.limit || 100;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+      
+      set({ 
+        orders: paginatedOrders,
+        totalOrders: filteredOrders.length,
+        totalPages: Math.ceil(filteredOrders.length / limit),
+        currentPage: page,
+        loading: false 
+      });
     } catch (error: any) {
       set({ 
         error: error.message || 'Error fetching orders', 
@@ -66,15 +98,18 @@ const useOrderStore = create<OrderState>((set, get) => ({
   fetchOrderById: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.get(`/api/orders/${id}`);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      if (response.data.success) {
+      const order = mockOrders.find(o => o.id === id);
+      
+      if (order) {
         set({ 
-          selectedOrder: response.data.data, 
+          selectedOrder: order, 
           loading: false 
         });
       } else {
-        throw new Error(response.data.error);
+        throw new Error('Order not found');
       }
     } catch (error: any) {
       set({ 
@@ -87,10 +122,15 @@ const useOrderStore = create<OrderState>((set, get) => ({
   updateOrder: async (id: string, updates: Partial<Order>) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.put(`/api/orders/${id}`, updates);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      if (response.data.success) {
-        const updatedOrder = response.data.data;
+      const orderIndex = mockOrders.findIndex(o => o.id === id);
+      
+      if (orderIndex !== -1) {
+        const updatedOrder = { ...mockOrders[orderIndex], ...updates };
+        mockOrders[orderIndex] = updatedOrder;
+        
         set(state => ({
           orders: state.orders.map(order => 
             order.id === id ? updatedOrder : order
@@ -101,7 +141,7 @@ const useOrderStore = create<OrderState>((set, get) => ({
           loading: false
         }));
       } else {
-        throw new Error(response.data.error);
+        throw new Error('Order not found');
       }
     } catch (error: any) {
       set({ 
@@ -114,9 +154,14 @@ const useOrderStore = create<OrderState>((set, get) => ({
   deleteOrder: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.delete(`/api/orders/${id}`);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      if (response.data.success) {
+      const orderIndex = mockOrders.findIndex(o => o.id === id);
+      
+      if (orderIndex !== -1) {
+        mockOrders.splice(orderIndex, 1);
+        
         set(state => ({
           orders: state.orders.filter(order => order.id !== id),
           selectedOrder: state.selectedOrder?.id === id 
@@ -125,7 +170,7 @@ const useOrderStore = create<OrderState>((set, get) => ({
           loading: false
         }));
       } else {
-        throw new Error(response.data.error);
+        throw new Error('Order not found');
       }
     } catch (error: any) {
       set({ 

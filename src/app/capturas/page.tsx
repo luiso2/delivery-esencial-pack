@@ -13,9 +13,9 @@ import {
   MapPinIcon,
   ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Capture, CaptureTypeLabels, CaptureStatusLabels, CaptureStats } from '@/types/capture';
+import { mockCaptures } from '@/data/mockCaptures';
 import Image from 'next/image';
 
 interface CaptureData {
@@ -37,15 +37,43 @@ export default function CapturasPage() {
   const fetchCaptures = async () => {
     try {
       setLoading(true);
-      let params = '?includeOrders=true';
-      if (filter !== 'all') params += `&status=${filter}`;
-      if (typeFilter !== 'all') params += `&type=${typeFilter}`;
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      const response = await axios.get(`/api/captures${params}`);
+      let filteredCaptures = [...mockCaptures];
       
-      if (response.data.success) {
-        setData(response.data.data);
+      // Apply status filter
+      if (filter !== 'all') {
+        filteredCaptures = filteredCaptures.filter(capture => capture.status === filter);
       }
+      
+      // Apply type filter
+      if (typeFilter !== 'all') {
+        filteredCaptures = filteredCaptures.filter(capture => capture.type === typeFilter);
+      }
+      
+      // Calculate stats
+      const today = new Date();
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      const stats: CaptureStats = {
+        total: mockCaptures.length,
+        pending: mockCaptures.filter(c => c.status === 'pending').length,
+        verified: mockCaptures.filter(c => c.status === 'verified').length,
+        rejected: mockCaptures.filter(c => c.status === 'rejected').length,
+        incomplete: mockCaptures.filter(c => c.status === 'incomplete').length,
+        todayCount: mockCaptures.filter(c => 
+          new Date(c.capturedAt).toDateString() === today.toDateString()
+        ).length,
+        weekCount: mockCaptures.filter(c => 
+          new Date(c.capturedAt) >= weekAgo
+        ).length
+      };
+      
+      setData({
+        captures: filteredCaptures,
+        stats
+      });
     } catch (error) {
       console.error('Error fetching captures:', error);
       toast.error('Error al cargar las capturas');
@@ -56,26 +84,37 @@ export default function CapturasPage() {
 
   const updateCaptureStatus = async (captureId: string, newStatus: 'verified' | 'rejected' | 'incomplete', reason?: string) => {
     try {
-      const updateData: any = { status: newStatus };
-      if (newStatus === 'verified') {
-        updateData.verifiedBy = 'Admin';
-        updateData.verifiedAt = new Date().toISOString();
-      } else if (newStatus === 'rejected' && reason) {
-        updateData.rejectionReason = reason;
-        updateData.verifiedBy = 'Admin';
-        updateData.verifiedAt = new Date().toISOString();
-      }
-
-      const response = await axios.put(`/api/captures/${captureId}`, updateData);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      if (response.data.success) {
-        const statusMessage = newStatus === 'verified' ? 'marcada como entregada' : 
-                             newStatus === 'incomplete' ? 'marcada como incompleta' : 
-                             'marcada con incidencia';
-        toast.success(`Captura ${statusMessage}`);
-        fetchCaptures();
-        setSelectedCapture(null);
+      const captureIndex = mockCaptures.findIndex(c => c.id === captureId);
+      if (captureIndex === -1) {
+        throw new Error('Capture not found');
       }
+      
+      const updatedCapture = {
+        ...mockCaptures[captureIndex],
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (newStatus === 'verified') {
+        updatedCapture.verifiedBy = 'Admin';
+        updatedCapture.verifiedAt = new Date().toISOString();
+      } else if (newStatus === 'rejected' && reason) {
+        updatedCapture.rejectionReason = reason;
+        updatedCapture.verifiedBy = 'Admin';
+        updatedCapture.verifiedAt = new Date().toISOString();
+      }
+      
+      mockCaptures[captureIndex] = updatedCapture;
+      
+      const statusMessage = newStatus === 'verified' ? 'marcada como entregada' : 
+                           newStatus === 'incomplete' ? 'marcada como incompleta' : 
+                           'marcada con incidencia';
+      toast.success(`Captura ${statusMessage}`);
+      fetchCaptures();
+      setSelectedCapture(null);
     } catch (error) {
       console.error('Error updating capture:', error);
       toast.error('Error al actualizar la captura');

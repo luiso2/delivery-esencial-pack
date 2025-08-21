@@ -13,10 +13,10 @@ import {
   MapPinIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
-import axios from 'axios';
 import RouteCard from '@/components/routes/RouteCard';
 import RouteFilters from '@/components/routes/RouteFilters';
 import { Route } from '@/types/route';
+import { mockRoutes } from '@/data/mockRoutes';
 
 interface RouteMetrics {
   total: number;
@@ -49,11 +49,28 @@ export default function RoutesPage() {
 
   const fetchRoutes = async () => {
     try {
-      const response = await axios.get('/api/routes');
-      if (response.data.success) {
-        setRoutes(response.data.data.routes);
-        setMetrics(response.data.data.metrics);
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setRoutes(mockRoutes);
+      
+      // Calculate metrics from mock data
+      const metrics: RouteMetrics = {
+        total: mockRoutes.length,
+        active: mockRoutes.filter(r => r.status === 'active').length,
+        draft: mockRoutes.filter(r => r.status === 'draft').length,
+        completed: mockRoutes.filter(r => r.status === 'completed').length,
+        totalOrders: mockRoutes.reduce((sum, r) => sum + r.orders.length, 0),
+        totalDistance: mockRoutes.reduce((sum, r) => sum + parseFloat((r.totalDistance || '0 km').replace(' km', '')), 0).toFixed(1) + ' km',
+        averageTime: Math.round(mockRoutes.reduce((sum, r) => {
+          const timeStr = r.estimatedTime || '0 min';
+          const hours = timeStr.includes('h') ? parseInt(timeStr.split('h')[0]) : 0;
+          const minutes = timeStr.includes('min') ? parseInt(timeStr.split('min')[0].split(' ').pop() || '0') : 0;
+          return sum + (hours * 60 + minutes);
+        }, 0) / mockRoutes.length) + ' min'
+      };
+      
+      setMetrics(metrics);
     } catch (error) {
       console.error('Error fetching routes:', error);
     } finally {

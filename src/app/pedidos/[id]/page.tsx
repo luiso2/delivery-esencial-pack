@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import axios from 'axios';
+// import axios from 'axios'; // Removed - using mock data
+import { mockOrders } from '@/data/mockOrders';
+import { mockCaptures } from '@/data/mockCaptures';
 import { Order, OrderStatusLabels, OrderTypeLabels, canTransitionToStatus } from '@/types/order';
 import { 
   ArrowLeftIcon,
@@ -40,9 +42,13 @@ export default function OrderDetailPage() {
 
   const fetchOrder = async (id: string) => {
     try {
-      const response = await axios.get(`/api/orders/${id}`);
-      if (response.data.success) {
-        setOrder(response.data.data);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Find order in mock data
+      const foundOrder = mockOrders.find(order => order.id === id);
+      if (foundOrder) {
+        setOrder(foundOrder);
       } else {
         toast.error('Pedido no encontrado');
         router.push('/pedidos');
@@ -65,11 +71,13 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      const response = await axios.put(`/api/orders/${order.id}`, { status: newStatus });
-      if (response.data.success) {
-        setOrder(response.data.data);
-        toast.success('Estado actualizado correctamente');
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Update order status in mock data
+      const updatedOrder = { ...order, status: newStatus };
+      setOrder(updatedOrder);
+      toast.success('Estado actualizado correctamente');
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Error al actualizar el estado');
@@ -87,11 +95,13 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      const response = await axios.put(`/api/orders/${order.id}`, { items: updatedItems });
-      if (response.data.success) {
-        setOrder(response.data.data);
-        toast.success('Item actualizado');
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update order items in mock data
+      const updatedOrder = { ...order, items: updatedItems };
+      setOrder(updatedOrder);
+      toast.success('Item actualizado');
     } catch (error) {
       console.error('Error updating item:', error);
       toast.error('Error al actualizar el item');
@@ -105,14 +115,22 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      // Create capture records for delivery proof
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create capture records for delivery proof (mock)
       const captureData = {
+        id: `capture-${Date.now()}`,
         orderId: order.id,
-        type: 'delivery',
-        imageUrl: '/api/placeholder/400/300', // In real app, this would be actual photos
+        type: 'delivery' as const,
+        imageUrl: '/api/placeholder/400/300',
         thumbnailUrl: '/api/placeholder/100/75',
+        status: 'verified' as const,
         notes: deliveryNotes || `Entrega completada para pedido ${order.id}`,
         capturedBy: 'Juan Pérez',
+        capturedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         location: {
           latitude: 23.1136,
           longitude: -82.3666,
@@ -120,23 +138,21 @@ export default function OrderDetailPage() {
         }
       };
 
-      const captureResponse = await axios.post('/api/captures', captureData);
+      // Add to mock captures
+      mockCaptures.push(captureData);
       
-      if (captureResponse.data.success) {
-        // Update order status to delivered
-        const orderResponse = await axios.put(`/api/orders/${order.id}`, { 
-          status: 'delivered',
-          captureStatus: 'success',
-          notes: order.notes ? `${order.notes}\n\nEntrega confirmada: ${deliveryNotes || 'Sin notas adicionales'}` : `Entrega confirmada: ${deliveryNotes || 'Sin notas adicionales'}`
-        });
-        
-        if (orderResponse.data.success) {
-          setOrder(orderResponse.data.data);
-          toast.success('Pedido marcado como entregado');
-          setShowDeliveredModal(false);
-          setDeliveryNotes('');
-        }
-      }
+      // Update order status to delivered
+      const updatedOrder = {
+        ...order,
+        status: 'delivered' as const,
+        captureStatus: 'success' as const,
+        notes: order.notes ? `${order.notes}\n\nEntrega confirmada: ${deliveryNotes || 'Sin notas adicionales'}` : `Entrega confirmada: ${deliveryNotes || 'Sin notas adicionales'}`
+      };
+      
+      setOrder(updatedOrder);
+      toast.success('Pedido marcado como entregado');
+      setShowDeliveredModal(false);
+      setDeliveryNotes('');
     } catch (error) {
       console.error('Error marking as delivered:', error);
       toast.error('Error al marcar como entregado');
@@ -153,18 +169,20 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      // Update order status to incomplete
-      const response = await axios.put(`/api/orders/${order.id}`, { 
-        status: 'incomplete',
-        notes: order.notes ? `${order.notes}\n\nRazón incompleto: ${incompleteReason}` : `Razón incompleto: ${incompleteReason}`
-      });
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      if (response.data.success) {
-        setOrder(response.data.data);
-        toast.success('Pedido marcado como incompleto');
-        setShowIncompleteModal(false);
-        setIncompleteReason('');
-      }
+      // Update order status to incomplete
+      const updatedOrder = {
+        ...order,
+        status: 'incomplete' as const,
+        notes: order.notes ? `${order.notes}\n\nRazón incompleto: ${incompleteReason}` : `Razón incompleto: ${incompleteReason}`
+      };
+      
+      setOrder(updatedOrder);
+      toast.success('Pedido marcado como incompleto');
+      setShowIncompleteModal(false);
+      setIncompleteReason('');
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Error al actualizar el pedido');
@@ -178,14 +196,22 @@ export default function OrderDetailPage() {
 
     setUpdating(true);
     try {
-      // Create capture record
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create capture record (mock)
       const captureData = {
+        id: `capture-${Date.now()}`,
         orderId: order.id,
-        type: 'document',
-        imageUrl: '/api/placeholder/400/300', // In real app, this would be actual photo
+        type: 'document' as const,
+        imageUrl: '/api/placeholder/400/300',
         thumbnailUrl: '/api/placeholder/100/75',
+        status: 'verified' as const,
         notes: captureNotes || `Albarán capturado para pedido ${order.id}`,
         capturedBy: 'Juan Pérez',
+        capturedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         location: {
           latitude: 23.1136,
           longitude: -82.3666,
@@ -193,21 +219,19 @@ export default function OrderDetailPage() {
         }
       };
 
-      const captureResponse = await axios.post('/api/captures', captureData);
+      // Add to mock captures
+      mockCaptures.push(captureData);
       
-      if (captureResponse.data.success) {
-        // Update order capture status
-        const orderResponse = await axios.put(`/api/orders/${order.id}`, { 
-          captureStatus: 'success' 
-        });
-        
-        if (orderResponse.data.success) {
-          setOrder(orderResponse.data.data);
-          toast.success('Albarán capturado exitosamente');
-          setShowCaptureModal(false);
-          setCaptureNotes('');
-        }
-      }
+      // Update order capture status
+      const updatedOrder = {
+        ...order,
+        captureStatus: 'success' as const
+      };
+      
+      setOrder(updatedOrder);
+      toast.success('Albarán capturado exitosamente');
+      setShowCaptureModal(false);
+      setCaptureNotes('');
     } catch (error) {
       console.error('Error capturing:', error);
       toast.error('Error al capturar el albarán');
