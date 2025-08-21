@@ -2,6 +2,20 @@
 
 Este proyecto incluye scripts para hacer deploy directo a master sin pull requests, dándote control absoluto sobre el proceso.
 
+## 📁 **Estructura del Repositorio**
+
+- **`master`** - Código fuente principal
+- **`out-static-files`** - **SOLO archivos estáticos de build** (carpeta `out/`)
+- **`.github/workflows/auto-deploy.yml`** - Configuración de GitHub Actions
+
+### 🎯 **Rama out-static-files**
+
+Esta rama contiene **únicamente** los archivos generados por el build de Next.js:
+- ✅ Solo archivos de la carpeta `out/`
+- ✅ Sin código fuente, dependencias o configuraciones
+- ✅ Perfecta para despliegue en servidores de producción
+- ✅ Ideal para pull directo en Plesk u otros paneles de hosting
+
 ## 📁 Archivos Incluidos
 
 ### 1. `push-master.ps1` - Push Directo
@@ -89,6 +103,26 @@ npm run build && .\push-master.ps1 "Update build"
 # Deploy completo automatizado
 .\deploy.ps1
 ```
+
+## 🌐 **Despliegue en Plesk**
+
+### Para usar la rama `out-static-files` en tu servidor Plesk:
+
+1. **En Plesk Git Manager:**
+   - Selecciona la rama: `out-static-files`
+   - Haz pull para obtener solo los archivos de producción
+   - ✅ Obtendrás únicamente los archivos HTML, CSS, JS y assets
+
+2. **Ventajas:**
+   - 🚀 Descarga más rápida (solo archivos necesarios)
+   - 🔒 Sin exposición de código fuente
+   - 📦 Sin dependencias de Node.js en el servidor
+   - ⚡ Despliegue directo sin build en servidor
+
+3. **Automatización:**
+   - Cada push a `master` actualiza automáticamente `out-static-files`
+   - GitHub Actions se encarga del build y actualización
+   - Solo necesitas hacer pull en Plesk cuando quieras actualizar
 
 ## 📋 Notas Importantes
 
