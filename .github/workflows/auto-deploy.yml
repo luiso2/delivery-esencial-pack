@@ -39,7 +39,9 @@ jobs:
         git fetch origin out-static-files || true
         git checkout --orphan temp-out-static-files
         git rm -rf --cached .
-        git add -f out/
+        cp -r out/* .
+        rm -rf out/
+        git add .
         git commit -m "Auto update static files: $(date)"
         git branch -D out-static-files || true
         git branch -m temp-out-static-files out-static-files
