@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   ShoppingCartIcon, 
   CameraIcon, 
@@ -15,10 +17,7 @@ import {
   CurrencyDollarIcon,
   MapIcon
 } from '@heroicons/react/24/outline';
-// import axios from 'axios'; // Removed - using mock data
-import { mockOrders } from '@/data/mockOrders';
-import { mockCaptures } from '@/data/mockCaptures';
-import { mockRoutes } from '@/data/mockRoutes';
+import orderService from '@/services/orderService';
 
 interface Metrics {
   orders: {
@@ -52,53 +51,101 @@ interface Metrics {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const { user, loading: authLoading, requireAuth } = useAuth();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchMetrics();
+    requireAuth(); // Verificar autenticación
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchMetrics();
+    }
+  }, [user]);
 
   const fetchMetrics = async () => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Obtener pedidos del día desde la API
+      const ordersResponse = await orderService.getOrders({ limit: 100 });
+      const orders = ordersResponse.data || [];
       
-      // Calculate metrics from mock data
+      // Obtener métricas desde la API
+      const metricsResponse = await orderService.getMetrics();
+      const apiMetrics = metricsResponse.metrics || {};
+      
+      // Calcular métricas desde los pedidos
       const orderMetrics = {
-        total: mockOrders.length,
-        pending: mockOrders.filter(o => o.status === 'pending').length,
-        inTransit: mockOrders.filter(o => o.status === 'in_transit').length,
-        delivered: mockOrders.filter(o => o.status === 'delivered').length,
-        failed: mockOrders.filter(o => o.status === 'failed').length,
-        incomplete: mockOrders.filter(o => o.status === 'incomplete').length,
-        delayed: mockOrders.filter(o => o.status === 'pending' && new Date(o.estimatedDelivery) < new Date()).length,
-        todayDeliveries: mockOrders.filter(o => 
-          o.status === 'delivered' && 
-          new Date(o.estimatedDelivery).toDateString() === new Date().toDateString()
-        ).length
+        total: orders.length,
+        pending: orders.filter(o => o.status === 'pending').length,
+        inTransit: orders.filter(o => o.status === 'in_transit').length,
+        delivered: orders.filter(o => o.status === 'delivered').length,
+        failed: orders.filter(o => o.status === 'failed').length,
+        incomplete: orders.filter(o => o.status === 'incomplete').length,
+        delayed: orders.filter(o => o.status === 'pending' && new Date(o.estimatedDelivery) < new Date()).length,
+        todayDeliveries: orders.filter(o => {
+          const deliveryDate = new Date(o.estimatedDelivery);
+          const today = new Date();
+          return o.status === 'delivered' && deliveryDate.toDateString() === today.toDateString();
+        }).length
       };
       
-      const captureMetrics = {
-        pending: mockCaptures.filter(c => c.status === 'pending').length,
-        failed: mockCaptures.filter(c => c.status === 'rejected').length,
-        success: mockCaptures.filter(c => c.status === 'verified').length,
-        partial: mockCaptures.filter(c => c.status === 'incomplete').length
+      // Obtener capturas si está disponible
+      let captureMetrics = {
+        pending: 0,
+        failed: 0,
+        success: apiMetrics.delivered || 0,
+        partial: 0
       };
       
+      try {
+        const capturesResponse = await orderService.getCaptures();
+        if (capturesResponse.success && capturesResponse.captures) {
+          const captures = capturesResponse.captures as any[];
+          captureMetrics = {
+            pending: captures.filter((c: any) => c.status === 'pending').length,
+            failed: captures.filter((c: any) => c.status === 'rejected' || c.status === 'failed').length,
+            success: captures.filter((c: any) => c.status === 'verified' || c.status === 'success').length,
+            partial: captures.filter((c: any) => c.status === 'incomplete' || c.status === 'partial').length
+          };
+        }
+      } catch (error) {
+        console.log('Error obteniendo capturas, usando valores por defecto');
+      }
+      
+      // Calcular ingresos
       const revenueMetrics = {
-        total: mockOrders.reduce((sum, order) => sum + order.driverPayment, 0),
-        pending: mockOrders.filter(o => o.status === 'pending').reduce((sum, order) => sum + order.driverPayment, 0),
-        average: mockOrders.length > 0 ? mockOrders.reduce((sum, order) => sum + order.driverPayment, 0) / mockOrders.length : 0
+        total: apiMetrics.total_earnings || orders.reduce((sum, order) => sum + (order.driverPayment || 0), 0),
+        pending: orders.filter(o => o.status === 'pending').reduce((sum, order) => sum + (order.driverPayment || 0), 0),
+        average: orders.length > 0 ? (apiMetrics.total_earnings || 0) / orders.length : 0
       };
       
-      const routeMetrics = {
-        total: mockRoutes.length,
-        active: mockRoutes.filter(r => r.status === 'active').length,
-        draft: mockRoutes.filter(r => r.status === 'draft').length,
-        completed: mockRoutes.filter(r => r.status === 'completed').length,
-        totalOrders: mockRoutes.reduce((sum, route) => sum + route.orders.length, 0)
+      // Obtener rutas si está disponible
+      let routeMetrics = {
+        total: 0,
+        active: 0,
+        draft: 0,
+        completed: 0,
+        totalOrders: orders.length
       };
+      
+      try {
+        const routesResponse = await orderService.getRoutes();
+        if (routesResponse.success && routesResponse.routes) {
+          const routes = routesResponse.routes as any[];
+          routeMetrics = {
+            total: routes.length,
+            active: routes.filter((r: any) => r.status === 'active').length,
+            draft: routes.filter((r: any) => r.status === 'draft').length,
+            completed: routes.filter((r: any) => r.status === 'completed').length,
+            totalOrders: routes.reduce((sum: number, route: any) => sum + (route.orders?.length || 0), 0)
+          };
+        }
+      } catch (error) {
+        console.log('Error obteniendo rutas, usando valores por defecto');
+      }
       
       setMetrics({
         orders: orderMetrics,
@@ -108,6 +155,37 @@ export default function HomePage() {
       });
     } catch (error) {
       console.error('Error fetching metrics:', error);
+      // Establecer métricas vacías si hay error
+      setMetrics({
+        orders: {
+          total: 0,
+          pending: 0,
+          inTransit: 0,
+          delivered: 0,
+          failed: 0,
+          incomplete: 0,
+          delayed: 0,
+          todayDeliveries: 0
+        },
+        captures: {
+          pending: 0,
+          failed: 0,
+          success: 0,
+          partial: 0
+        },
+        revenue: {
+          total: 0,
+          pending: 0,
+          average: 0
+        },
+        routes: {
+          total: 0,
+          active: 0,
+          draft: 0,
+          completed: 0,
+          totalOrders: 0
+        }
+      });
     } finally {
       setLoading(false);
     }
