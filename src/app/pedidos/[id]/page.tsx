@@ -23,7 +23,7 @@ import toast from 'react-hot-toast';
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { currentOrder, fetchOrder, loading } = useOrderStore();
+  const { selectedOrder, fetchOrderById, loading } = useOrderStore();
   const [order, setOrder] = useState<Order | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
@@ -37,17 +37,20 @@ export default function OrderDetailPage() {
     if (params.id) {
       handleFetchOrder(params.id as string);
     }
-  }, [params.id, fetchOrder]);
+  }, [params.id, fetchOrderById]);
 
   useEffect(() => {
-    if (currentOrder) {
-      setOrder(currentOrder);
+    if (selectedOrder) {
+      setOrder(selectedOrder);
     }
-  }, [currentOrder]);
+  }, [selectedOrder]);
 
   const handleFetchOrder = async (id: string) => {
     try {
-      await fetchOrder(id);
+      const fetchedOrder = await fetchOrderById(id);
+      if (fetchedOrder) {
+        setOrder(fetchedOrder);
+      }
     } catch (error) {
       console.error('Error fetching order:', error);
       toast.error('Error al cargar el pedido');

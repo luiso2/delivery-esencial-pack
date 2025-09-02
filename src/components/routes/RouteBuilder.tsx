@@ -67,7 +67,7 @@ export default function RouteBuilder({ route, onSave, onCancel }: RouteBuilderPr
     
     setSelectedOrders(updated);
     // Refresh available orders
-    fetchAvailableOrders();
+    fetchOrders();
   };
 
   const handleDragStart = (index: number) => {

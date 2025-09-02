@@ -93,12 +93,6 @@ export default function RouteDetailPage() {
     }
   };
 
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 600));
-  // Function implementation moved to handleRemoveOrder above
-  };
-
   // Rest of the component implementation
   if (loading) {
     return (
@@ -120,17 +114,6 @@ export default function RouteDetailPage() {
   }
 
   const route = currentRoute; // For backward compatibility with existing code
-        orders: updatedOrders
-      };
-      
-      setRoute(updatedRoute);
-      setOrders(orders.filter(o => o.id !== orderId));
-      toast.success('Pedido eliminado de la ruta');
-    } catch (error) {
-      console.error('Error removing order:', error);
-      toast.error('Error al eliminar el pedido');
-    }
-  };
 
   const getStatusBadge = (status: Route['status']) => {
     const badges = {
