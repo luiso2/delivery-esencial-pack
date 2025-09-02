@@ -1,0 +1,242 @@
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+const xmlrpc = require('xmlrpc');
+
+// Configuración de Odoo desde variables de entorno
+const ODOO_URL = process.env.ODOO_URL || 'http://localhost:8069';
+const ODOO_DB = process.env.ODOO_DB || 'odoo';
+const ODOO_USER = process.env.ODOO_USER || 'lbencomo94@gmail.com';
+const ODOO_PASSWORD = process.env.ODOO_PASSWORD || 'admin';
+
+// Función helper para llamadas XML-RPC usando la biblioteca estándar
+async function xmlRpcCall(endpoint: string, method: string, params: any[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const client = xmlrpc.createClient({ 
+      url: `${ODOO_URL}${endpoint}`,
+      path: endpoint
+    });
+
+    console.log(`[XML-RPC] Llamando a ${endpoint} - método: ${method}`);
+    console.log(`[XML-RPC] Parámetros:`, params);
+
+    client.methodCall(method, params, (err: any, value: any) => {
+      if (err) {
+        console.error('[XML-RPC] Error:', err);
+        reject(err);
+      } else {
+        console.log('[XML-RPC] Respuesta exitosa:', value);
+        resolve(value);
+      }
+    });
+  });
+}
+
+// Generar token único
+function generateToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { phone, pin } = await request.json();
+    
+    console.log('[carrier-login] ========================================');
+    console.log('[carrier-login] Iniciando autenticación');
+    console.log('[carrier-login] Teléfono:', phone);
+    console.log('[carrier-login] Odoo URL:', ODOO_URL);
+    console.log('[carrier-login] Database:', ODOO_DB);
+    
+    // Validar entrada
+    if (!phone || !pin) {
+      return NextResponse.json(
+        { success: false, error: 'Teléfono y PIN son requeridos' },
+        { status: 400 }
+      );
+    }
+
+    // Limpiar el número de teléfono (trim primero, luego remover caracteres especiales)
+    const cleanPhone = phone.trim().replace(/[\s\-+]/g, '');
+    console.log('[carrier-login] Teléfono limpio:', cleanPhone);
+
+    try {
+      // Paso 1: Autenticarse como admin en Odoo
+      console.log('[carrier-login] Autenticando como admin en Odoo...');
+      const uid = await xmlRpcCall('/xmlrpc/2/common', 'authenticate', [
+        ODOO_DB,
+        ODOO_USER,
+        ODOO_PASSWORD,
+        {}
+      ]);
+
+      if (!uid) {
+        console.error('[carrier-login] Error: No se pudo autenticar como admin');
+        return NextResponse.json(
+          { success: false, error: 'Error de configuración del servidor' },
+          { status: 500 }
+        );
+      }
+
+      console.log('[carrier-login] Autenticación admin exitosa, UID:', uid);
+
+      // Paso 2: Buscar transportista por teléfono
+      console.log('[carrier-login] Buscando transportista con teléfono:', cleanPhone);
+      
+      const carrierIds = await xmlRpcCall('/xmlrpc/2/object', 'execute_kw', [
+        ODOO_DB,
+        uid,
+        ODOO_PASSWORD,
+        'res.partner',
+        'search',
+        [[['phone', '=', cleanPhone]]],
+        { limit: 1 }
+      ]);
+
+      console.log('[carrier-login] IDs encontrados:', carrierIds);
+
+      if (!carrierIds || !Array.isArray(carrierIds) || carrierIds.length === 0) {
+        console.log('[carrier-login] No se encontró transportista con teléfono:', cleanPhone);
+        return NextResponse.json(
+          { success: false, error: 'Teléfono no registrado' },
+          { status: 401 }
+        );
+      }
+
+      // Paso 3: Leer datos del transportista
+      const carrierId = carrierIds[0];
+      console.log('[carrier-login] Leyendo datos del transportista ID:', carrierId);
+      
+      const carriers = await xmlRpcCall('/xmlrpc/2/object', 'execute_kw', [
+        ODOO_DB,
+        uid,
+        ODOO_PASSWORD,
+        'res.partner',
+        'read',
+        [[carrierId]],
+        { 
+          fields: [
+            'id', 'name', 'carrier_code', 'carrier_phone', 
+            'carrier_pin', 'carrier_vehicle_type', 'phone',
+            'is_delivery_carrier', 'x_auth_token', 'x_token_expiry'
+          ] 
+        }
+      ]);
+
+      console.log('[carrier-login] Datos del transportista (raw):', carriers);
+
+      if (!carriers || !Array.isArray(carriers) || carriers.length === 0) {
+        console.error('[carrier-login] No se pudieron leer los datos del transportista');
+        return NextResponse.json(
+          { success: false, error: 'Error al obtener datos del transportista' },
+          { status: 500 }
+        );
+      }
+
+      const carrier = carriers[0];
+      console.log('[carrier-login] Datos del transportista:', {
+        id: carrier.id,
+        name: carrier.name,
+        phone: carrier.carrier_phone || carrier.phone,
+        hasPin: !!carrier.carrier_pin,
+        isDeliveryCarrier: carrier.is_delivery_carrier
+      });
+
+      // Verificar si es transportista
+      if (!carrier.is_delivery_carrier) {
+        console.log('[carrier-login] Usuario encontrado pero no es transportista');
+        return NextResponse.json(
+          { success: false, error: 'Usuario no autorizado como transportista' },
+          { status: 403 }
+        );
+      }
+
+      // Paso 4: Verificar PIN
+      const carrierPin = carrier.carrier_pin ? String(carrier.carrier_pin) : '';
+      const inputPin = String(pin);
+      
+      if (carrierPin !== inputPin) {
+        console.log('[carrier-login] PIN incorrecto');
+        return NextResponse.json(
+          { success: false, error: 'PIN incorrecto' },
+          { status: 401 }
+        );
+      }
+
+      console.log('[carrier-login] PIN verificado correctamente');
+
+      // Paso 5: Generar token
+      const token = generateToken();
+
+      // Paso 6: Preparar respuesta
+      const response = {
+        success: true,
+        token: token,
+        carrier: {
+          id: carrier.id,
+          name: carrier.name,
+          code: carrier.carrier_code || 'N/A',
+          vehicle_type: carrier.carrier_vehicle_type || 'car',
+          zones: [],
+          phone: carrier.carrier_phone || carrier.phone || cleanPhone
+        }
+      };
+
+      console.log('[carrier-login] Login exitoso para:', carrier.name);
+      console.log('[carrier-login] ========================================');
+      
+      return NextResponse.json(response);
+
+    } catch (xmlError: any) {
+      console.error('[carrier-login] Error XML-RPC:', xmlError);
+      
+      // Si hay un error de conexión, intentar con datos simulados para desarrollo
+      if (xmlError.message && (xmlError.message.includes('ECONNREFUSED') || xmlError.message.includes('fetch'))) {
+        console.warn('[carrier-login] Odoo no disponible, usando datos simulados para desarrollo');
+        
+        // Solo para el transportista de prueba
+        if (cleanPhone === '53512345678' && pin === '1234') {
+          const token = generateToken();
+          return NextResponse.json({
+            success: true,
+            token: token,
+            carrier: {
+              id: 50,
+              name: 'Pedro Delivery',
+              code: 'PD001',
+              vehicle_type: 'car',
+              zones: [],
+              phone: cleanPhone
+            }
+          });
+        }
+      }
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Error del servidor',
+          details: xmlError.message 
+        },
+        { status: 500 }
+      );
+    }
+
+  } catch (error: any) {
+    console.error('[carrier-login] Error general:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Error del servidor',
+        details: error.message 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// Endpoint para verificar el estado del token  
+export async function GET(request: NextRequest) {
+  return NextResponse.json({ 
+    valid: true, 
+    message: 'Endpoint de verificación disponible' 
+  });
+}

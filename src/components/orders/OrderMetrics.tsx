@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-// import axios from 'axios';
-import { mockOrders } from '@/data/mockOrders';
-import { mockCaptures } from '@/data/mockCaptures';
+import axios from 'axios';
 import {
   ChartBarIcon,
   TruckIcon,
@@ -47,68 +45,45 @@ export default function OrderMetrics() {
 
   const fetchMetrics = async () => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      setLoading(true);
       
-      // Calculate metrics from mock data
-      const totalOrders = mockOrders.length;
-      const pendingOrders = mockOrders.filter(order => order.status === 'pending').length;
-      const inTransitOrders = mockOrders.filter(order => order.status === 'in_transit').length;
-      const deliveredOrders = mockOrders.filter(order => order.status === 'delivered').length;
-      const failedOrders = mockOrders.filter(order => order.status === 'failed').length;
-      const incompleteOrders = mockOrders.filter(order => order.status === 'incomplete').length;
-      
-      // Calculate delayed orders (estimated delivery passed)
-      const now = new Date();
-      const delayedOrders = mockOrders.filter(order => {
-        const estimatedDelivery = new Date(order.estimatedDelivery);
-        return now > estimatedDelivery && !['delivered', 'failed'].includes(order.status);
-      }).length;
-      
-      // Today's deliveries
-      const today = new Date().toDateString();
-      const todayDeliveries = mockOrders.filter(order => {
-        return order.status === 'delivered' && new Date(order.updatedAt).toDateString() === today;
-      }).length;
-      
-      // Capture metrics
-      const pendingCaptures = mockCaptures.filter(capture => capture.status === 'pending').length;
-      const failedCaptures = mockCaptures.filter(capture => capture.status === 'rejected').length;
-      const successCaptures = mockCaptures.filter(capture => capture.status === 'verified').length;
-      const partialCaptures = mockCaptures.filter(capture => capture.status === 'incomplete').length;
-      
-      // Revenue metrics
-      const totalRevenue = mockOrders.reduce((sum, order) => sum + order.driverPayment, 0);
-      const pendingRevenue = mockOrders
-        .filter(order => order.status === 'pending')
-        .reduce((sum, order) => sum + order.driverPayment, 0);
-      const averageRevenue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-      
-      const metricsData: Metrics = {
-        orders: {
-          total: totalOrders,
-          pending: pendingOrders,
-          inTransit: inTransitOrders,
-          delivered: deliveredOrders,
-          failed: failedOrders,
-          incomplete: incompleteOrders,
-          delayed: delayedOrders,
-          todayDeliveries
-        },
-        captures: {
-          pending: pendingCaptures,
-          failed: failedCaptures,
-          success: successCaptures,
-          partial: partialCaptures
-        },
-        revenue: {
-          total: totalRevenue,
-          pending: pendingRevenue,
-          average: averageRevenue
+      // Fetch metrics from real API
+      const response = await axios.get('/api/delivery/metrics', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
         }
-      };
+      });
       
-      setMetrics(metricsData);
+      if (response.data.success) {
+        setMetrics(response.data.metrics);
+      } else {
+        console.error('Error fetching metrics:', response.data.message);
+        // Set default empty metrics on error
+        setMetrics({
+          orders: {
+            total: 0,
+            pending: 0,
+            inTransit: 0,
+            delivered: 0,
+            failed: 0,
+            incomplete: 0,
+            delayed: 0,
+            todayDeliveries: 0
+          },
+          captures: {
+            pending: 0,
+            failed: 0,
+            success: 0,
+            partial: 0
+          },
+          revenue: {
+            total: 0,
+            pending: 0,
+            average: 0
+          }
+        });
+      }
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {

@@ -16,7 +16,7 @@ import {
 import RouteCard from '@/components/routes/RouteCard';
 import RouteFilters from '@/components/routes/RouteFilters';
 import { Route } from '@/types/route';
-import { mockRoutes } from '@/data/mockRoutes';
+import useRouteStore from '@/store/routeStore';
 
 interface RouteMetrics {
   total: number;
@@ -29,10 +29,9 @@ interface RouteMetrics {
 }
 
 export default function RoutesPage() {
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const { routes, fetchRoutes, loading } = useRouteStore();
   const [filteredRoutes, setFilteredRoutes] = useState<Route[]>([]);
   const [metrics, setMetrics] = useState<RouteMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: 'all',
     search: ''
@@ -41,42 +40,33 @@ export default function RoutesPage() {
 
   useEffect(() => {
     fetchRoutes();
-  }, []);
+  }, [fetchRoutes]);
 
   useEffect(() => {
     applyFilters();
   }, [routes, filters]);
 
-  const fetchRoutes = async () => {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      setRoutes(mockRoutes);
-      
-      // Calculate metrics from mock data
-      const metrics: RouteMetrics = {
-        total: mockRoutes.length,
-        active: mockRoutes.filter(r => r.status === 'active').length,
-        draft: mockRoutes.filter(r => r.status === 'draft').length,
-        completed: mockRoutes.filter(r => r.status === 'completed').length,
-        totalOrders: mockRoutes.reduce((sum, r) => sum + r.orders.length, 0),
-        totalDistance: mockRoutes.reduce((sum, r) => sum + parseFloat((r.totalDistance || '0 km').replace(' km', '')), 0).toFixed(1) + ' km',
-        averageTime: Math.round(mockRoutes.reduce((sum, r) => {
+  // Calculate metrics when routes change
+  useEffect(() => {
+    if (routes.length > 0) {
+      const calculatedMetrics: RouteMetrics = {
+        total: routes.length,
+        active: routes.filter(r => r.status === 'active').length,
+        draft: routes.filter(r => r.status === 'draft').length,
+        completed: routes.filter(r => r.status === 'completed').length,
+        totalOrders: routes.reduce((sum, r) => sum + r.orders.length, 0),
+        totalDistance: routes.reduce((sum, r) => sum + parseFloat((r.totalDistance || '0 km').replace(' km', '')), 0).toFixed(1) + ' km',
+        averageTime: Math.round(routes.reduce((sum, r) => {
           const timeStr = r.estimatedTime || '0 min';
           const hours = timeStr.includes('h') ? parseInt(timeStr.split('h')[0]) : 0;
           const minutes = timeStr.includes('min') ? parseInt(timeStr.split('min')[0].split(' ').pop() || '0') : 0;
           return sum + (hours * 60 + minutes);
-        }, 0) / mockRoutes.length) + ' min'
+        }, 0) / routes.length) + ' min'
       };
       
-      setMetrics(metrics);
-    } catch (error) {
-      console.error('Error fetching routes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setMetrics(calculatedMetrics);
+     }
+   }, [routes]);
 
   const applyFilters = () => {
     let filtered = [...routes];

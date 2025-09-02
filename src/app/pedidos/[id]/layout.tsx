@@ -1,10 +1,4 @@
-import { mockOrders } from '@/data/mockOrders';
-
-export async function generateStaticParams() {
-  return mockOrders.map((order) => ({
-    id: order.id.toString(),
-  }));
-}
+// Dynamic route generation - no static params needed
 
 export default function OrderLayout({
   children,

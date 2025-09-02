@@ -2,9 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'export',
+  // output: 'export',  // Comentado para permitir API routes
   trailingSlash: true,
-  distDir: 'out',
+  // distDir: 'out',  // Comentado porque no es necesario sin export
   images: {
     unoptimized: true,
     domains: ['localhost'],

@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Route, RouteOrder, RouteColors } from '@/types/route';
 import { Order } from '@/types/order';
-import { mockOrders } from '@/data/mockOrders';
+import useOrderStore from '@/store/orderStore';
 import toast from 'react-hot-toast';
 
 interface RouteBuilderProps {
@@ -20,6 +20,7 @@ interface RouteBuilderProps {
 }
 
 export default function RouteBuilder({ route, onSave, onCancel }: RouteBuilderProps) {
+  const { orders, fetchOrders } = useOrderStore();
   const [name, setName] = useState(route?.name || '');
   const [description, setDescription] = useState(route?.description || '');
   const [color, setColor] = useState(route?.color || 'bg-blue-500');
@@ -30,23 +31,18 @@ export default function RouteBuilder({ route, onSave, onCancel }: RouteBuilderPr
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchAvailableOrders();
-  }, []);
+    fetchOrders();
+  }, [fetchOrders]);
 
-  const fetchAvailableOrders = async () => {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Filter pending orders and exclude already selected ones
-      const orders = mockOrders.filter((order: Order) => {
-        return order.status === 'pending' && !selectedOrders.some(so => so.orderId === order.id);
-      });
-      setAvailableOrders(orders);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    }
-  };
+  useEffect(() => {
+    // Filter pending orders and exclude already selected ones
+    const filtered = orders.filter((order: Order) => {
+      return order.status === 'pending' && !selectedOrders.some(so => so.orderId === order.id);
+    });
+    setAvailableOrders(filtered);
+  }, [orders, selectedOrders]);
+
+
 
   const handleAddOrder = (order: Order) => {
     const newRouteOrder: RouteOrder = {

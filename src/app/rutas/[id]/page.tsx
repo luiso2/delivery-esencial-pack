@@ -18,9 +18,8 @@ import {
   PlayIcon,
   PauseIcon
 } from '@heroicons/react/24/outline';
-// import axios from 'axios'; // Removed - using mock data
-import { mockRoutes } from '@/data/mockRoutes';
-import { mockOrders } from '@/data/mockOrders';
+import useRouteStore from '@/store/routeStore';
+import useOrderStore from '@/store/orderStore';
 import { Route } from '@/types/route';
 import { Order } from '@/types/order';
 import toast from 'react-hot-toast';
@@ -28,59 +27,38 @@ import toast from 'react-hot-toast';
 export default function RouteDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [route, setRoute] = useState<Route | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { currentRoute, fetchRoute, loading: routeLoading } = useRouteStore();
+  const { orders, fetchOrders, loading: ordersLoading } = useOrderStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  
+  const loading = routeLoading || ordersLoading;
 
   useEffect(() => {
     if (params.id) {
       fetchRoute(params.id as string);
+      fetchOrders(); // Fetch all orders to filter by route
     }
-  }, [params.id]);
+  }, [params.id, fetchRoute, fetchOrders]);
 
-  const fetchRoute = async (id: string) => {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Find route in mock data
-      const foundRoute = mockRoutes.find(route => route.id === id);
-      if (foundRoute) {
-        setRoute(foundRoute);
-        
-        // Filter orders that belong to this route
-        const routeOrderIds = foundRoute.orders.map((o: any) => o.orderId);
-        const filteredOrders = mockOrders.filter((order: Order) =>
-          routeOrderIds.includes(order.id)
-        );
-        setOrders(filteredOrders);
-      } else {
-        toast.error('Ruta no encontrada');
-      }
-    } catch (error) {
-      console.error('Error fetching route:', error);
-      toast.error('Error al cargar la ruta');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Filter orders that belong to this route
+  const routeOrders = currentRoute ? 
+    orders.filter(order => 
+      currentRoute.orders.some((routeOrder: any) => routeOrder.orderId === order.id)
+    ) : [];
+
+  if (!currentRoute && !loading) {
+    toast.error('Ruta no encontrada');
+    router.push('/rutas');
+    return;
+  }
 
   const handleStatusChange = async (newStatus: Route['status']) => {
-    if (!route) return;
+    if (!currentRoute) return;
 
+    const { updateRoute } = useRouteStore.getState();
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Update route status in mock data
-      const updatedRoute = {
-        ...route,
-        status: newStatus
-      };
-      
-      setRoute(updatedRoute);
+      await updateRoute(currentRoute.id, { status: newStatus });
       toast.success(`Ruta ${newStatus === 'active' ? 'activada' : newStatus === 'completed' ? 'completada' : 'pausada'}`);
     } catch (error) {
       console.error('Error updating route:', error);
@@ -89,14 +67,11 @@ export default function RouteDetailPage() {
   };
 
   const handleDeleteRoute = async () => {
-    if (!route || !confirm('¿Estás seguro de eliminar esta ruta?')) return;
+    if (!currentRoute || !confirm('¿Estás seguro de eliminar esta ruta?')) return;
 
+    const { deleteRoute } = useRouteStore.getState();
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // In a real app, this would remove from the database
-      // For mock data, we just simulate success
+      await deleteRoute(currentRoute.id);
       toast.success('Ruta eliminada');
       router.push('/rutas');
     } catch (error) {
@@ -106,15 +81,45 @@ export default function RouteDetailPage() {
   };
 
   const handleRemoveOrder = async (orderId: string) => {
-    if (!route) return;
+    if (!currentRoute) return;
+
+    const { removeOrderFromRoute } = useRouteStore.getState();
+    try {
+      await removeOrderFromRoute(currentRoute.id, orderId);
+      toast.success('Pedido eliminado de la ruta');
+    } catch (error) {
+      console.error('Error removing order:', error);
+      toast.error('Error al eliminar el pedido');
+    }
+  };
 
     try {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 600));
-      
-      const updatedOrders = route.orders.filter(o => o.orderId !== orderId);
-      const updatedRoute = {
-        ...route,
+  // Function implementation moved to handleRemoveOrder above
+  };
+
+  // Rest of the component implementation
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!currentRoute) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Ruta no encontrada</h2>
+          <p className="mt-2 text-gray-600">La ruta que buscas no existe.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const route = currentRoute; // For backward compatibility with existing code
         orders: updatedOrders
       };
       
@@ -179,7 +184,7 @@ export default function RouteDetailPage() {
     );
   }
 
-  if (!route) {
+  if (!currentRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

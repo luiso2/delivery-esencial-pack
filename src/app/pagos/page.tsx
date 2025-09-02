@@ -11,8 +11,8 @@ import {
   FunnelIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { mockPayments, weeklyPaymentHistory, paymentMethodSummary } from '@/data/mockPayments';
-import { mockOrders } from '@/data/mockOrders';
+import useOrderStore from '@/store/orderStore';
+import axios from 'axios';
 import { Payment } from '@/types/payment';
 
 interface PaymentWithOrder extends Payment {
@@ -55,42 +55,53 @@ export default function PagosPage() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
       
-      let filteredPayments = [...mockPayments];
+      // Fetch payments from real API
+      const response = await axios.get('/api/delivery/payments', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          status: filter !== 'all' ? filter : undefined
+        }
+      });
       
-      // Apply status filter
-      if (filter !== 'all') {
-        filteredPayments = filteredPayments.filter(payment => payment.status === filter);
-      }
-      
-      // Add order details to payments
-      const paymentsWithOrders = filteredPayments.map(payment => ({
-        ...payment,
-        order: mockOrders.find(order => order.id === payment.orderId)
-      }));
-      
-      // Calculate summary
-      const summary = {
-        totalPending: mockPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
-        totalCompleted: mockPayments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0),
-        totalCancelled: mockPayments.filter(p => p.status === 'cancelled').reduce((sum, p) => sum + p.amount, 0),
-        totalAmount: mockPayments.reduce((sum, p) => sum + p.amount, 0),
-        pendingCount: mockPayments.filter(p => p.status === 'pending').length,
-        completedCount: mockPayments.filter(p => p.status === 'completed').length,
-        cancelledCount: mockPayments.filter(p => p.status === 'cancelled').length
+      const payments = response.data.payments || [];
+      const summary = response.data.summary || {
+        totalPending: 0,
+        totalCompleted: 0,
+        totalCancelled: 0,
+        totalAmount: 0,
+        pendingCount: 0,
+        completedCount: 0,
+        cancelledCount: 0
       };
       
       setData({
-        payments: paymentsWithOrders,
-        summary,
-        weeklyHistory: weeklyPaymentHistory,
-        methodSummary: paymentMethodSummary
+        payments: payments,
+        summary: response.data.summary || summary,
+        weeklyHistory: response.data.weeklyHistory || [],
+        methodSummary: response.data.methodSummary || []
       });
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast.error('Error al cargar los pagos');
+      // Set empty data on error
+      setData({
+        payments: [],
+        summary: {
+          totalPending: 0,
+          totalCompleted: 0,
+          totalCancelled: 0,
+          totalAmount: 0,
+          pendingCount: 0,
+          completedCount: 0,
+          cancelledCount: 0
+        },
+        weeklyHistory: [],
+        methodSummary: []
+      });
     } finally {
       setLoading(false);
     }

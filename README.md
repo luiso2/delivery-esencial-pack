@@ -11,7 +11,7 @@ Sistema de gestión de entregas construido con Next.js 14, TypeScript y Tailwind
 - ✅ **Diseño Responsive** - Mobile-first con Tailwind CSS
 - ✅ **TypeScript** - Type safety completo
 - ✅ **Estado Global** con Zustand
-- ✅ **Datos Mock** - Misma lógica de negocio que la app Ionic
+- ✅ **Integración API Real** - Conectado con backend Odoo
 - ✅ **Navegación Adaptativa** - Tab bar móvil, sidebar desktop
 - ✅ **Optimizado para Performance** - Code splitting, lazy loading
 
@@ -67,7 +67,7 @@ nextjs-entregas/
 │   │   └── orders/             # Componentes de pedidos
 │   ├── store/                  # Estado global (Zustand)
 │   ├── types/                  # TypeScript types
-│   ├── data/                   # Mock data
+│   ├── data/                   # Data types and interfaces
 │   └── lib/                    # Utilidades
 ├── public/                     # Assets estáticos
 └── package.json

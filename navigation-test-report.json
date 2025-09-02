@@ -1,0 +1,120 @@
+{
+  "timestamp": "2025-09-02T14:06:05.787Z",
+  "pages": [
+    {
+      "name": "Login",
+      "path": "/login",
+      "status": "working",
+      "response_time": 61,
+      "error": null,
+      "requires_auth": false
+    },
+    {
+      "name": "Dashboard",
+      "path": "/",
+      "status": "working",
+      "response_time": 84,
+      "error": null,
+      "requires_auth": true
+    },
+    {
+      "name": "Pedidos",
+      "path": "/pedidos",
+      "status": "working",
+      "response_time": 67,
+      "error": null,
+      "requires_auth": true
+    },
+    {
+      "name": "Rutas",
+      "path": "/rutas",
+      "status": "working",
+      "response_time": 68,
+      "error": null,
+      "requires_auth": true
+    },
+    {
+      "name": "Capturas",
+      "path": "/capturas",
+      "status": "working",
+      "response_time": 100,
+      "error": null,
+      "requires_auth": true
+    },
+    {
+      "name": "Pagos",
+      "path": "/pagos",
+      "status": "working",
+      "response_time": 95,
+      "error": null,
+      "requires_auth": true
+    },
+    {
+      "name": "Perfil",
+      "path": "/perfil",
+      "status": "working",
+      "response_time": 97,
+      "error": null,
+      "requires_auth": true
+    }
+  ],
+  "apis": [
+    {
+      "name": "Login API",
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "status": "working",
+      "response_time": 99,
+      "error": null
+    },
+    {
+      "name": "Orders API",
+      "endpoint": "/api/delivery/orders",
+      "method": "GET",
+      "status": "working",
+      "response_time": 68,
+      "error": null
+    },
+    {
+      "name": "Routes API",
+      "endpoint": "/api/delivery/routes",
+      "method": "GET",
+      "status": "working",
+      "response_time": 59,
+      "error": null
+    },
+    {
+      "name": "Captures API",
+      "endpoint": "/api/delivery/captures",
+      "method": "GET",
+      "status": "working",
+      "response_time": 111,
+      "error": null
+    },
+    {
+      "name": "Payments API",
+      "endpoint": "/api/delivery/payments",
+      "method": "GET",
+      "status": "working",
+      "response_time": 100,
+      "error": null
+    },
+    {
+      "name": "Profile API",
+      "endpoint": "/api/delivery/profile",
+      "method": "GET",
+      "status": "working",
+      "response_time": 81,
+      "error": null
+    }
+  ],
+  "summary": {
+    "total_pages": 7,
+    "pages_working": 7,
+    "pages_failing": 0,
+    "total_apis": 6,
+    "apis_working": 6,
+    "apis_failing": 0
+  },
+  "generated_at": "2025-09-02T14:06:13.624Z"
+}

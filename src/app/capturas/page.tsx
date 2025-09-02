@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { Capture, CaptureTypeLabels, CaptureStatusLabels, CaptureStats } from '@/types/capture';
-import { mockCaptures } from '@/data/mockCaptures';
+import axios from 'axios';
 import Image from 'next/image';
 
 interface CaptureData {
@@ -37,46 +37,50 @@ export default function CapturasPage() {
   const fetchCaptures = async () => {
     try {
       setLoading(true);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
       
-      let filteredCaptures = [...mockCaptures];
+      // Fetch captures from real API
+      const response = await axios.get('/api/delivery/captures', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          status: filter !== 'all' ? filter : undefined,
+          type: typeFilter !== 'all' ? typeFilter : undefined
+        }
+      });
       
-      // Apply status filter
-      if (filter !== 'all') {
-        filteredCaptures = filteredCaptures.filter(capture => capture.status === filter);
-      }
-      
-      // Apply type filter
-      if (typeFilter !== 'all') {
-        filteredCaptures = filteredCaptures.filter(capture => capture.type === typeFilter);
-      }
-      
-      // Calculate stats
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
-      const stats: CaptureStats = {
-        total: mockCaptures.length,
-        pending: mockCaptures.filter(c => c.status === 'pending').length,
-        verified: mockCaptures.filter(c => c.status === 'verified').length,
-        rejected: mockCaptures.filter(c => c.status === 'rejected').length,
-        incomplete: mockCaptures.filter(c => c.status === 'incomplete').length,
-        todayCount: mockCaptures.filter(c => 
-          new Date(c.capturedAt).toDateString() === today.toDateString()
-        ).length,
-        weekCount: mockCaptures.filter(c => 
-          new Date(c.capturedAt) >= weekAgo
-        ).length
+      const captures = response.data.captures || [];
+      const stats = response.data.stats || {
+        total: 0,
+        pending: 0,
+        verified: 0,
+        rejected: 0,
+        incomplete: 0,
+        todayCount: 0,
+        weekCount: 0
       };
       
       setData({
-        captures: filteredCaptures,
-        stats
+        captures: captures,
+        stats: stats
       });
     } catch (error) {
       console.error('Error fetching captures:', error);
       toast.error('Error al cargar las capturas');
+      // Set empty data on error
+      setData({
+        captures: [],
+        stats: {
+          total: 0,
+          pending: 0,
+          verified: 0,
+          rejected: 0,
+          incomplete: 0,
+          todayCount: 0,
+          weekCount: 0
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -84,30 +88,16 @@ export default function CapturasPage() {
 
   const updateCaptureStatus = async (captureId: string, newStatus: 'verified' | 'rejected' | 'incomplete', reason?: string) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const captureIndex = mockCaptures.findIndex(c => c.id === captureId);
-      if (captureIndex === -1) {
-        throw new Error('Capture not found');
-      }
-      
-      const updatedCapture = {
-        ...mockCaptures[captureIndex],
+      // Update capture status via API
+      await axios.put(`/api/delivery/captures/${captureId}`, {
         status: newStatus,
-        updatedAt: new Date().toISOString()
-      };
-      
-      if (newStatus === 'verified') {
-        updatedCapture.verifiedBy = 'Admin';
-        updatedCapture.verifiedAt = new Date().toISOString();
-      } else if (newStatus === 'rejected' && reason) {
-        updatedCapture.rejectionReason = reason;
-        updatedCapture.verifiedBy = 'Admin';
-        updatedCapture.verifiedAt = new Date().toISOString();
-      }
-      
-      mockCaptures[captureIndex] = updatedCapture;
+        reason: reason
+      }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       const statusMessage = newStatus === 'verified' ? 'marcada como entregada' : 
                            newStatus === 'incomplete' ? 'marcada como incompleta' : 

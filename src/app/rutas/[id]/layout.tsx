@@ -1,10 +1,5 @@
-import { mockRoutes } from '@/data/mockRoutes';
-
-export async function generateStaticParams() {
-  return mockRoutes.map((route) => ({
-    id: route.id.toString(),
-  }));
-}
+// Dynamic route generation - no static params needed for dynamic routes
+// Routes will be fetched dynamically from the API
 
 export default function RouteLayout({
   children,
