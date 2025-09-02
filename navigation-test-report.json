@@ -1,11 +1,11 @@
 {
-  "timestamp": "2025-09-02T14:06:05.787Z",
+  "timestamp": "2025-09-02T15:21:21.570Z",
   "pages": [
     {
       "name": "Login",
       "path": "/login",
       "status": "working",
-      "response_time": 61,
+      "response_time": 125,
       "error": null,
       "requires_auth": false
     },
@@ -13,7 +13,7 @@
       "name": "Dashboard",
       "path": "/",
       "status": "working",
-      "response_time": 84,
+      "response_time": 192,
       "error": null,
       "requires_auth": true
     },
@@ -21,7 +21,7 @@
       "name": "Pedidos",
       "path": "/pedidos",
       "status": "working",
-      "response_time": 67,
+      "response_time": 177,
       "error": null,
       "requires_auth": true
     },
@@ -29,7 +29,7 @@
       "name": "Rutas",
       "path": "/rutas",
       "status": "working",
-      "response_time": 68,
+      "response_time": 97,
       "error": null,
       "requires_auth": true
     },
@@ -37,7 +37,7 @@
       "name": "Capturas",
       "path": "/capturas",
       "status": "working",
-      "response_time": 100,
+      "response_time": 109,
       "error": null,
       "requires_auth": true
     },
@@ -45,7 +45,7 @@
       "name": "Pagos",
       "path": "/pagos",
       "status": "working",
-      "response_time": 95,
+      "response_time": 69,
       "error": null,
       "requires_auth": true
     },
@@ -53,7 +53,7 @@
       "name": "Perfil",
       "path": "/perfil",
       "status": "working",
-      "response_time": 97,
+      "response_time": 112,
       "error": null,
       "requires_auth": true
     }
@@ -64,7 +64,7 @@
       "endpoint": "/api/auth/login",
       "method": "POST",
       "status": "working",
-      "response_time": 99,
+      "response_time": 84,
       "error": null
     },
     {
@@ -72,7 +72,7 @@
       "endpoint": "/api/delivery/orders",
       "method": "GET",
       "status": "working",
-      "response_time": 68,
+      "response_time": 83,
       "error": null
     },
     {
@@ -80,7 +80,7 @@
       "endpoint": "/api/delivery/routes",
       "method": "GET",
       "status": "working",
-      "response_time": 59,
+      "response_time": 84,
       "error": null
     },
     {
@@ -88,7 +88,7 @@
       "endpoint": "/api/delivery/captures",
       "method": "GET",
       "status": "working",
-      "response_time": 111,
+      "response_time": 98,
       "error": null
     },
     {
@@ -96,7 +96,7 @@
       "endpoint": "/api/delivery/payments",
       "method": "GET",
       "status": "working",
-      "response_time": 100,
+      "response_time": 83,
       "error": null
     },
     {
@@ -104,7 +104,7 @@
       "endpoint": "/api/delivery/profile",
       "method": "GET",
       "status": "working",
-      "response_time": 81,
+      "response_time": 97,
       "error": null
     }
   ],
@@ -116,5 +116,5 @@
     "apis_working": 6,
     "apis_failing": 0
   },
-  "generated_at": "2025-09-02T14:06:13.624Z"
+  "generated_at": "2025-09-02T15:21:34.826Z"
 }

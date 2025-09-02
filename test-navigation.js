@@ -7,8 +7,8 @@ const axios = require('axios');
 const fs = require('fs');
 
 // Configuración base
-const BASE_URL = 'http://localhost:8080';
-const API_BASE = 'http://localhost:8080/api';
+const BASE_URL = 'http://localhost:3001';
+const API_BASE = 'http://localhost:3001/api';
 
 // Credenciales de prueba
 const TEST_CREDENTIALS = {
