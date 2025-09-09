@@ -2,9 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'export',  // Habilitado para generar archivos estáticos
+  // output: 'export',  // Comentado - Railway puede ejecutar Next.js con servidor
   trailingSlash: false,
-  // distDir: 'out',  // Por defecto Next.js usa 'out' cuando output es 'export'
   images: {
     unoptimized: true,
     domains: ['localhost'],
