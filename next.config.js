@@ -2,9 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // output: 'export',  // Comentado para permitir API routes
+  output: 'export',  // Habilitado para generar archivos estáticos
   trailingSlash: false,
-  // distDir: 'out',  // Comentado porque no es necesario sin export
+  // distDir: 'out',  // Por defecto Next.js usa 'out' cuando output es 'export'
   images: {
     unoptimized: true,
     domains: ['localhost'],
