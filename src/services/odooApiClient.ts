@@ -38,8 +38,8 @@ class OdooApiClient {
     // Verificar que apiConfig esté disponible y tenga las propiedades necesarias
     if (!apiConfig || !apiConfig.baseUrl || !apiConfig.database) {
       console.error('apiConfig is undefined or incomplete. Using fallback configuration.');
-      this.baseUrl = 'http://localhost:30017';
-      this.database = 'odoo17_db';
+      this.baseUrl = 'http://localhost:8069';
+      this.database = 'odoo';
     } else {
       this.baseUrl = apiConfig.baseUrl;
       this.database = apiConfig.database;
