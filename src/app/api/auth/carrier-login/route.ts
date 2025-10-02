@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     try {
       // Hacer llamada directa al endpoint de Odoo
       console.log('[carrier-login] Llamando a Odoo directamente...');
-      
-      const odooResponse = await fetch(`${ODOO_URL}/api/delivery/login`, {
+
+      const odooResponse = await fetch(`${ODOO_URL}/api/v2/delivery/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,8 +53,42 @@ export async function POST(request: NextRequest) {
         })
       });
 
-      const odooData = await odooResponse.json();
-      console.log('[carrier-login] Respuesta de Odoo:', odooData);
+      // Log response details
+      console.log('[carrier-login] Response status:', odooResponse.status);
+      console.log('[carrier-login] Response headers:', odooResponse.headers);
+
+      const responseText = await odooResponse.text();
+      console.log('[carrier-login] Raw response (first 500 chars):', responseText.substring(0, 500));
+
+      // Check if response is HTML
+      if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+        console.error('[carrier-login] Received HTML response instead of JSON');
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Error de configuración del servidor',
+            details: 'El servidor devolvió HTML en lugar de JSON'
+          },
+          { status: 500 }
+        );
+      }
+
+      let odooData;
+      try {
+        odooData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[carrier-login] Error parsing JSON:', parseError);
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Error procesando respuesta del servidor',
+            details: 'Respuesta inválida del servidor'
+          },
+          { status: 500 }
+        );
+      }
+
+      console.log('[carrier-login] Parsed response:', odooData);
 
       // Verificar si hubo error en Odoo
       if (odooData.error) {
