@@ -18,6 +18,7 @@ import {
   MapIcon
 } from '@heroicons/react/24/outline';
 import orderService from '@/services/orderService';
+import captureService from '@/services/captureService';
 
 interface Metrics {
   orders: {
@@ -101,14 +102,14 @@ export default function HomePage() {
       };
       
       try {
-        const capturesResponse = await orderService.getCaptures();
+        const capturesResponse = await captureService.getCaptures();
         if (capturesResponse.success && capturesResponse.captures) {
-          const captures = capturesResponse.captures as any[];
+          const captures = capturesResponse.captures;
           captureMetrics = {
-            pending: captures.filter((c: any) => c.status === 'pending').length,
-            failed: captures.filter((c: any) => c.status === 'rejected' || c.status === 'failed').length,
-            success: captures.filter((c: any) => c.status === 'verified' || c.status === 'success').length,
-            partial: captures.filter((c: any) => c.status === 'incomplete' || c.status === 'partial').length
+            pending: captures.filter(c => c.status === 'pending').length,
+            failed: captures.filter(c => c.status === 'rejected').length,
+            success: captures.filter(c => c.status === 'verified').length,
+            partial: captures.filter(c => c.status === 'incomplete').length
           };
         }
       } catch (error) {

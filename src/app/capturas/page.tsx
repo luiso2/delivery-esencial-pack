@@ -15,8 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { Capture, CaptureTypeLabels, CaptureStatusLabels, CaptureStats } from '@/types/capture';
-import axios from 'axios';
-import Image from 'next/image';
+import captureService from '@/services/captureService';
 
 interface CaptureData {
   captures: Capture[];
@@ -37,35 +36,22 @@ export default function CapturasPage() {
   const fetchCaptures = async () => {
     try {
       setLoading(true);
-      
-      // Fetch captures from real API
-      const response = await axios.get('/api/delivery/captures', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          status: filter !== 'all' ? filter : undefined,
-          type: typeFilter !== 'all' ? typeFilter : undefined
-        }
+
+      // Use the new capture service with V2 endpoints
+      const response = await captureService.getCaptures({
+        status: filter !== 'all' ? filter : undefined,
+        type: typeFilter !== 'all' ? typeFilter : undefined
       });
-      
-      const captures = response.data.captures || [];
-      const stats = response.data.stats || {
-        total: 0,
-        pending: 0,
-        verified: 0,
-        rejected: 0,
-        incomplete: 0,
-        todayCount: 0,
-        weekCount: 0
-      };
-      
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error al cargar las capturas');
+      }
+
       setData({
-        captures: captures,
-        stats: stats
+        captures: response.captures,
+        stats: response.stats
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching captures:', error);
       toast.error('Error al cargar las capturas');
       // Set empty data on error
@@ -88,24 +74,20 @@ export default function CapturasPage() {
 
   const updateCaptureStatus = async (captureId: string, newStatus: 'verified' | 'rejected' | 'incomplete', reason?: string) => {
     try {
-      // Update capture status via API
-      await axios.put(`/api/delivery/captures/${captureId}`, {
-        status: newStatus,
-        reason: reason
-      }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const statusMessage = newStatus === 'verified' ? 'marcada como entregada' : 
-                           newStatus === 'incomplete' ? 'marcada como incompleta' : 
+      // Update capture status using the capture service
+      const response = await captureService.updateCaptureStatus(captureId, newStatus, reason);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error al actualizar la captura');
+      }
+
+      const statusMessage = newStatus === 'verified' ? 'marcada como entregada' :
+                           newStatus === 'incomplete' ? 'marcada como incompleta' :
                            'marcada con incidencia';
       toast.success(`Captura ${statusMessage}`);
       fetchCaptures();
       setSelectedCapture(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating capture:', error);
       toast.error('Error al actualizar la captura');
     }
