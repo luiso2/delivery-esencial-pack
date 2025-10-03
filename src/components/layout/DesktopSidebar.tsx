@@ -15,7 +15,6 @@ import {
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon },
   { name: 'Pedidos', href: '/pedidos', icon: ShoppingCartIcon },
-  { name: 'Rutas', href: '/rutas', icon: MapIcon },
   { name: 'Capturas', href: '/capturas', icon: CameraIcon },
   { name: 'Pagos', href: '/pagos', icon: CreditCardIcon },
   { name: 'Mi Cuenta', href: '/cuenta', icon: UserCircleIcon },

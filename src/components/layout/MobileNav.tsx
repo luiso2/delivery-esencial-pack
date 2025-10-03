@@ -20,7 +20,6 @@ import {
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon, activeIcon: HomeIconSolid },
   { name: 'Pedidos', href: '/pedidos', icon: ShoppingCartIcon, activeIcon: ShoppingCartIconSolid },
-  { name: 'Rutas', href: '/rutas', icon: MapIcon, activeIcon: MapIconSolid },
   { name: 'Pagos', href: '/pagos', icon: CreditCardIcon, activeIcon: CreditCardIconSolid },
   { name: 'Cuenta', href: '/cuenta', icon: UserCircleIcon, activeIcon: UserCircleIconSolid },
 ];
@@ -30,7 +29,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-50">
-      <div className="grid grid-cols-5 h-16">
+      <div className="grid grid-cols-4 h-16">
         {navigation.map((item) => {
           const isActive = pathname === item.href || 
                           (item.href !== '/' && pathname.startsWith(item.href));

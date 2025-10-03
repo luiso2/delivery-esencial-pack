@@ -206,19 +206,6 @@ export default function HomePage() {
       urgent: metrics?.orders.delayed || 0
     },
     {
-      icon: MapIcon,
-      title: 'Rutas de Entrega',
-      description: 'Optimiza y gestiona tus rutas de entrega',
-      link: '/rutas',
-      stats: metrics?.routes ? [
-        { label: 'Total', value: metrics.routes.total, type: 'neutral' },
-        { label: 'Activas', value: metrics.routes.active, type: 'success' },
-        { label: 'Borradores', value: metrics.routes.draft, type: 'warning' },
-        { label: 'Pedidos', value: metrics.routes.totalOrders, type: 'info' }
-      ] : [],
-      urgent: 0
-    },
-    {
       icon: CameraIcon,
       title: 'Capturas',
       description: 'Captura y guarda evidencias de entrega',
