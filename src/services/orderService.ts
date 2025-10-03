@@ -268,12 +268,12 @@ class OrderService {
   }
 
   /**
-   * Subir evidencia de entrega
+   * Subir evidencia de entrega (V2 - Conectado con Odoo)
    */
-  async uploadEvidence(orderId: string, type: string, data: string | File): Promise<any> {
+  async uploadEvidence(orderId: string, type: string, data: string | File, additionalData?: any): Promise<any> {
     try {
       let base64Data: string;
-      
+
       if (data instanceof File) {
         // Convertir archivo a base64
         const reader = new FileReader();
@@ -286,15 +286,19 @@ class OrderService {
         base64Data = data;
       }
 
+      // Usar el nuevo endpoint V2 conectado con Odoo
       const response = await odooApiClient.call<any>(
-        API_ENDPOINTS.CAPTURE_UPLOAD,
+        `/api/proxy/v2/delivery/upload_evidence`,
         'POST',
         {
-          order_id: orderId,
-          capture_type: type,
+          picking_id: orderId,
+          evidence_type: type === 'signature' ? 'signature' : 'photo',
           image_data: base64Data,
-          notes: '',
-          timestamp: new Date().toISOString()
+          notes: additionalData?.notes || '',
+          delivered_to: additionalData?.delivered_to || '',
+          delivered_dni: additionalData?.delivered_dni || '',
+          latitude: additionalData?.latitude,
+          longitude: additionalData?.longitude
         }
       );
 
@@ -310,44 +314,161 @@ class OrderService {
   }
 
   /**
-   * Obtener métricas del transportista
+   * Obtener evidencias existentes de una entrega
    */
-  async getMetrics(): Promise<any> {
+  async getEvidence(orderId: string): Promise<any> {
     try {
       const response = await odooApiClient.call<any>(
-        API_ENDPOINTS.METRICS,
+        `/api/proxy/v2/delivery/get_evidence`,
         'POST',
-        {}
+        { picking_id: orderId }
       );
 
       if (!response.success) {
-        // Devolver métricas vacías si falla
-        return {
-          success: true,
-          metrics: {
-            total_orders: 0,
-            delivered: 0,
-            pending: 0,
-            failed: 0,
-            success_rate: 0,
-            total_earnings: 0
-          }
-        };
+        throw new Error(response.error || 'Error al obtener evidencias');
       }
 
       return response;
     } catch (error: any) {
+      console.error('[OrderService] Error obteniendo evidencias:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Completar entrega con todas las evidencias
+   */
+  async completeDelivery(orderId: string, evidenceData: {
+    signature?: string;
+    photos?: string[];
+    notes?: string;
+    delivered_to?: string;
+    delivered_dni?: string;
+    latitude?: number;
+    longitude?: number;
+  }): Promise<any> {
+    try {
+      const payload: any = {
+        picking_id: orderId,
+        notes: evidenceData.notes || '',
+        delivered_to: evidenceData.delivered_to || '',
+        delivered_dni: evidenceData.delivered_dni || '',
+        latitude: evidenceData.latitude,
+        longitude: evidenceData.longitude
+      };
+
+      // Agregar firma si existe
+      if (evidenceData.signature) {
+        payload.signature = evidenceData.signature;
+      }
+
+      // Agregar fotos si existen (hasta 3)
+      if (evidenceData.photos) {
+        if (evidenceData.photos[0]) payload.photo = evidenceData.photos[0];
+        if (evidenceData.photos[1]) payload.photo_2 = evidenceData.photos[1];
+        if (evidenceData.photos[2]) payload.photo_3 = evidenceData.photos[2];
+      }
+
+      const response = await odooApiClient.call<any>(
+        `/api/proxy/v2/delivery/complete_delivery`,
+        'POST',
+        payload
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error al completar entrega');
+      }
+
+      return response;
+    } catch (error: any) {
+      console.error('[OrderService] Error completando entrega:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener métricas reales del transportista (V2 - Conectado con Odoo)
+   */
+  async getMetrics(period: 'today' | 'week' | 'month' | 'all' = 'month'): Promise<any> {
+    try {
+      // Obtener carrier ID del almacenamiento local
+      const carrierId = odooApiClient.getCarrierId();
+
+      if (!carrierId) {
+        throw new Error('No hay transportista autenticado');
+      }
+
+      const response = await odooApiClient.call<any>(
+        `/api/proxy/v2/delivery/metrics`,
+        'POST',
+        {
+          carrier_id: carrierId,
+          period: period
+        }
+      );
+
+      if (!response.success) {
+        // Devolver métricas vacías si falla
+        console.warn('[OrderService] Fallo al obtener métricas, devolviendo vacías:', response.error);
+        return {
+          success: true,
+          metrics: {
+            carrier: { name: 'Transportista', id: carrierId },
+            period: period,
+            orders: {
+              total: 0,
+              delivered: 0,
+              pending: 0,
+              in_transit: 0,
+              failed: 0
+            },
+            performance: {
+              success_rate: 0,
+              avg_delivery_time_hours: 0,
+              on_time_deliveries: 0
+            },
+            earnings: {
+              total: 0,
+              currency: 'CUP',
+              payments_count: 0,
+              commission_type: 'fixed',
+              commission_rate: 0
+            }
+          }
+        };
+      }
+
+      // Devolver métricas reales de Odoo
+      return response;
+
+    } catch (error: any) {
       console.error('[OrderService] Error obteniendo métricas:', error);
-      // Devolver métricas vacías
+
+      // Devolver métricas vacías como fallback
       return {
         success: true,
         metrics: {
-          total_orders: 0,
-          delivered: 0,
-          pending: 0,
-          failed: 0,
-          success_rate: 0,
-          total_earnings: 0
+          carrier: { name: 'Transportista', id: 'unknown' },
+          period: period,
+          orders: {
+            total: 0,
+            delivered: 0,
+            pending: 0,
+            in_transit: 0,
+            failed: 0
+          },
+          performance: {
+            success_rate: 0,
+            avg_delivery_time_hours: 0,
+            on_time_deliveries: 0
+          },
+          earnings: {
+            total: 0,
+            currency: 'CUP',
+            payments_count: 0,
+            commission_type: 'fixed',
+            commission_rate: 0
+          }
         }
       };
     }

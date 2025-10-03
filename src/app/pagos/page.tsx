@@ -12,8 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import useOrderStore from '@/store/orderStore';
-import axios from 'axios';
-import { Payment } from '@/types/payment';
+import paymentService from '@/services/paymentService';
+import { Payment, PaymentStatus } from '@/types/payment';
 
 interface PaymentWithOrder extends Payment {
   order?: any;
@@ -55,36 +55,56 @@ export default function PagosPage() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      
-      // Fetch payments from real API
-      const response = await axios.get('/api/delivery/payments', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          status: filter !== 'all' ? filter : undefined
+
+      // Usar el servicio de pagos con comisiones reales de Odoo
+      const response = await paymentService.getPayments('month');
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error al obtener pagos');
+      }
+
+      // Mapear los datos de Odoo a la estructura esperada por la UI
+      const mappedPayments = response.payments.map(payment => ({
+        id: payment.id,
+        orderId: payment.picking_name || payment.picking_id,
+        amount: payment.commission_amount,
+        status: (payment.payment_status === 'paid' ? 'completed' : 'pending') as PaymentStatus,
+        createdAt: payment.delivery_date,
+        updatedAt: payment.delivery_date,
+        paymentDate: payment.payment_status === 'paid' ? payment.delivery_date : undefined,
+        method: 'cash' as const, // Por defecto efectivo, se puede ajustar según Odoo
+        notes: `Entrega en ${payment.municipality} - ${payment.zone_name}`,
+        order: {
+          clientName: payment.client_name,
+          address: payment.delivery_address
         }
-      });
-      
-      const payments = response.data.payments || [];
-      const summary = response.data.summary || {
-        totalPending: 0,
-        totalCompleted: 0,
+      }));
+
+      // Filtrar por estado si es necesario
+      const filteredPayments = filter === 'all' ?
+        mappedPayments :
+        mappedPayments.filter(p => p.status === filter);
+
+      // Calcular resumen basado en los datos reales
+      const summary = {
+        totalPending: response.totals.pending_amount,
+        totalCompleted: response.totals.total_earnings,
         totalCancelled: 0,
-        totalAmount: 0,
-        pendingCount: 0,
-        completedCount: 0,
+        totalAmount: response.totals.total_earnings + response.totals.pending_amount,
+        pendingCount: mappedPayments.filter(p => p.status === 'pending').length,
+        completedCount: mappedPayments.filter(p => p.status === 'completed').length,
         cancelledCount: 0
       };
-      
+
       setData({
-        payments: payments,
-        summary: response.data.summary || summary,
-        weeklyHistory: response.data.weeklyHistory || [],
-        methodSummary: response.data.methodSummary || []
+        payments: filteredPayments,
+        summary,
+        weeklyHistory: [], // Se puede implementar más tarde
+        methodSummary: [
+          { method: 'Efectivo', total: summary.totalCompleted, percentage: 100 }
+        ]
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching payments:', error);
       toast.error('Error al cargar los pagos');
       // Set empty data on error

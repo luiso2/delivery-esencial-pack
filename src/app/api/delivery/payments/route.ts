@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     // Obtener el token del header
     const authHeader = request.headers.get('authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'No autorizado' },
@@ -15,72 +15,50 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Por ahora usar el ID 43 de Luis para testing
-    const carrierId = '43';
-    
-    // Preparar el body para Odoo
-    const body = {
-      jsonrpc: "2.0",
-      method: "call",
-      params: {},
-      id: Date.now()
-    };
+    // Obtener carrier ID del header de autenticación
+    const carrierId = request.headers.get('x-carrier-id');
 
-    // Hacer la petición a Odoo
-    const odooResponse = await fetch(`${ODOO_URL}/api/delivery/payments`, {
+    if (!carrierId) {
+      return NextResponse.json(
+        { error: 'Carrier ID requerido para obtener pagos' },
+        { status: 401 }
+      );
+    }
+
+    // Hacer la petición al nuevo endpoint V2 de pagos
+    const odooResponse = await fetch(`${ODOO_URL}/api/v2/delivery/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Carrier-Id': carrierId
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        carrier_id: carrierId,
+        period: 'month'
+      })
     });
 
     const odooData = await odooResponse.json();
-    
-    // Si la respuesta tiene formato JSON-RPC, extraer el resultado
-    if (odooData.jsonrpc && odooData.result) {
-      const result = odooData.result;
-      
-      if (!result.success) {
-        return NextResponse.json(
-          { error: result.error || 'Error obteniendo pagos' },
-          { status: 500 }
-        );
-      }
-      
-      // Devolver los datos de Odoo
-      return NextResponse.json({
-        success: true,
-        payments: result.payments || [],
-        totals: result.totals || {
-          pending: 0,
-          completed: 0,
-          total: 0
-        },
-        message: result.message || 'Datos de pagos obtenidos correctamente'
-      });
-    } else if (odooData.jsonrpc && odooData.error) {
-      // Si hay un error JSON-RPC
+
+    if (!odooData.success) {
       return NextResponse.json(
-        { 
-          error: odooData.error.message || 'Error de Odoo',
-          details: odooData.error.data 
-        },
+        { error: odooData.error || 'Error obteniendo pagos' },
         { status: 500 }
       );
     }
 
-    // Si no hay datos, devolver estructura vacía
+    // Devolver los datos de pagos con comisiones reales
     return NextResponse.json({
       success: true,
-      payments: [],
-      totals: {
-        pending: 0,
-        completed: 0,
-        total: 0
+      payments: odooData.payments || [],
+      totals: odooData.totals || {
+        pending_amount: 0,
+        total_delivered: 0,
+        total_earnings: 0,
+        payment_count: 0
       },
-      message: 'No hay pagos registrados'
+      carrier: odooData.carrier || {},
+      period: odooData.period || 'month',
+      message: 'Datos de pagos obtenidos correctamente'
     });
 
   } catch (error: any) {
@@ -98,8 +76,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { paymentId, action } = body;
 
-    // Por ahora usar el ID 43 de Luis para testing
-    const carrierId = '43';
+    // Obtener carrier ID del header de autenticación
+    const authHeader = request.headers.get('authorization');
+    const carrierId = request.headers.get('x-carrier-id');
+
+    if (!carrierId) {
+      return NextResponse.json(
+        { error: 'Carrier ID requerido para esta operación' },
+        { status: 401 }
+      );
+    }
 
     if (action === 'summary') {
       // Obtener resumen de pagos

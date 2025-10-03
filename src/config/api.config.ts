@@ -37,7 +37,12 @@ export const API_ENDPOINTS = {
   UPDATE_ORDER: (id: string) => `/api/delivery/orders/${id}/update`,
   UPDATE_STATUS: '/api/delivery/status/update',
   
-  // Capturas/Evidencias - Confirmación de entregas
+  // Capturas/Evidencias - Confirmación de entregas (V2 - Conectado con Odoo)
+  UPLOAD_EVIDENCE: '/api/v2/delivery/upload_evidence',      // Subir evidencia individual
+  GET_EVIDENCE: '/api/v2/delivery/get_evidence',            // Obtener evidencias existentes
+  COMPLETE_DELIVERY: '/api/v2/delivery/complete_delivery',  // Completar entrega con evidencias
+
+  // Legacy endpoints (mantener por compatibilidad)
   CAPTURES: '/api/delivery/captures',
   CAPTURE_UPLOAD: '/api/delivery/capture/upload',
   GET_CAPTURES: '/api/delivery/captures',
@@ -46,8 +51,10 @@ export const API_ENDPOINTS = {
   ROUTES: '/api/delivery/routes',
   ROUTE_OPTIMIZE: '/api/delivery/route/optimize',
   
-  // Métricas
+  // Métricas y Pagos (V2 - Conectado con Odoo)
   METRICS: '/api/delivery/metrics',
+  METRICS_V2: '/api/v2/delivery/metrics',        // Métricas con comisiones reales
+  PAYMENTS: '/api/v2/delivery/payments',         // Liquidaciones del transportista
   
   // Ubicación
   UPDATE_LOCATION: '/api/delivery/location/update',

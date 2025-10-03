@@ -45,11 +45,23 @@ export async function POST(
     // Obtener carrier ID del token (Authorization header)
     const authHeader = request.headers.get('authorization');
     let carrierId: string | null = null;
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Por ahora usar el ID 43 de Luis para testing
-      // En producción esto debería venir de una sesión o JWT
-      carrierId = '43';
+      // Obtener el carrier ID del localStorage del cliente
+      // El token se valida en el middleware o se extrae del JWT
+      const token = authHeader.substring(7); // Remover 'Bearer '
+
+      // Por ahora, obtener el carrierId del header X-Carrier-Id
+      // En el futuro se puede implementar JWT decoding aquí
+      carrierId = request.headers.get('x-carrier-id');
+
+      if (!carrierId) {
+        console.warn('[Proxy] No carrier ID provided in request');
+        return NextResponse.json(
+          { error: 'Carrier ID requerido para esta operación' },
+          { status: 401 }
+        );
+      }
     }
     
     // Pasar headers personalizados si existen
@@ -148,7 +160,15 @@ export async function GET(
     let carrierId: string | null = null;
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      carrierId = '43'; // Luis para testing
+      carrierId = request.headers.get('x-carrier-id');
+
+      if (!carrierId) {
+        console.warn('[Proxy] No carrier ID in GET request');
+        return NextResponse.json(
+          { error: 'Carrier ID requerido' },
+          { status: 401 }
+        );
+      }
     }
     
     if (carrierId) headers['X-Carrier-Id'] = carrierId;

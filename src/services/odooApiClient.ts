@@ -216,6 +216,11 @@ class OdooApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
+    // Agregar carrier ID si está disponible
+    if (this.carrierId) {
+      headers['X-Carrier-Id'] = this.carrierId;
+    }
+
     try {
       const response = await fetch(endpoint, {
         method,
